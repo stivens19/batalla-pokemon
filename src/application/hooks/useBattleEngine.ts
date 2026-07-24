@@ -8,126 +8,119 @@ export const useBattleEngine = () => {
   const [status, setStatus] = useState<BattleStatus>('IDLE');
   const [logs, setLogs] = useState<BattleLog[]>([]);
   
-  // Equipos y punteros
   const [playerTeam, setPlayerTeam] = useState<Character[]>([]);
   const [cpuTeam, setCpuTeam] = useState<Character[]>([]);
   const [playerActiveIdx, setPlayerActiveIdx] = useState(0);
   const [cpuActiveIdx, setCpuActiveIdx] = useState(0);
 
-  // Referencias para el motor asíncrono
+  // NUEVO: Referencias en memoria para los índices activos (Evita el Stale Closure)
+  const playerActiveIdxRef = useRef<number>(0);
+  const cpuActiveIdxRef = useRef<number>(0);
+
   const playerHpRef = useRef<number>(0);
   const cpuHpRef = useRef<number>(0);
   const intervalRef = useRef<number | null>(null);
   const turnRef = useRef<'PLAYER' | 'CPU'>('PLAYER');
 
-  // 1. Inicializar la batalla
   const initBattle = useCallback((pTeam: Character[], cTeam: Character[]) => {
     setPlayerTeam(pTeam);
     setCpuTeam(cTeam);
+    
+    // Sincronizamos estados y referencias a 0
     setPlayerActiveIdx(0);
+    playerActiveIdxRef.current = 0;
     setCpuActiveIdx(0);
+    cpuActiveIdxRef.current = 0;
     
     playerHpRef.current = pTeam[0].stats.hp;
     cpuHpRef.current = cTeam[0].stats.hp;
     
-    setLogs([{ 
-      id: uuidv4(), 
-      timestamp: new Date().toLocaleTimeString(), 
-      message: `¡Equipos listos! Selecciona tu Pokémon inicial o presiona Iniciar.`, 
-      isCritical: false 
-    }]);
+    setLogs([{ id: uuidv4(), timestamp: new Date().toLocaleTimeString(), message: `¡Equipos listos! Selecciona tu Pokémon inicial o presiona Iniciar.`, isCritical: false }]);
     setStatus('READY');
   }, []);
 
-  // 2. Lógica principal de cada turno (Debe ir ANTES de switchPlayerCharacter)
   const battleTick = useCallback(() => {
-    if (playerActiveIdx >= 3 || cpuActiveIdx >= 3) return;
+    // Leemos la verdad absoluta desde los Refs, no desde el estado de React
+    const pIdx = playerActiveIdxRef.current;
+    const cIdx = cpuActiveIdxRef.current;
+
+    if (pIdx >= 3 || cIdx >= 3) return;
 
     const isPlayerTurn = turnRef.current === 'PLAYER';
-    const activePlayer = playerTeam[playerActiveIdx];
-    const activeCpu = cpuTeam[cpuActiveIdx];
+    
+    // Usamos los índices exactos para obtener a los peleadores
+    const activePlayer = playerTeam[pIdx];
+    const activeCpu = cpuTeam[cIdx];
     
     const attacker = isPlayerTurn ? activePlayer : activeCpu;
     const defender = isPlayerTurn ? activeCpu : activePlayer;
 
     const result = calculateAttack(attacker, defender);
 
-    // Actualizamos las referencias en memoria
     if (isPlayerTurn) {
       cpuHpRef.current = Math.max(0, cpuHpRef.current - result.damage);
     } else {
       playerHpRef.current = Math.max(0, playerHpRef.current - result.damage);
     }
 
-    // Sincronizamos la UI
-    setPlayerTeam(team => team.map((p, i) => i === playerActiveIdx ? { ...p, stats: { ...p.stats, hp: playerHpRef.current } } : p));
-    setCpuTeam(team => team.map((p, i) => i === cpuActiveIdx ? { ...p, stats: { ...p.stats, hp: cpuHpRef.current } } : p));
+    // Actualizamos la UI apuntando al índice real (pIdx / cIdx)
+    setPlayerTeam(team => team.map((p, i) => i === pIdx ? { ...p, stats: { ...p.stats, hp: playerHpRef.current } } : p));
+    setCpuTeam(team => team.map((p, i) => i === cIdx ? { ...p, stats: { ...p.stats, hp: cpuHpRef.current } } : p));
     setLogs(prev => [...prev, result.log]);
 
-    // Evaluación de muerte del Jugador
     if (playerHpRef.current <= 0) {
-      if (intervalRef.current) clearInterval(intervalRef.current); // Detenemos el motor
+      if (intervalRef.current) clearInterval(intervalRef.current);
       
       const hasAlive = playerTeam.some(p => p.stats.hp > 0);
       if (!hasAlive) {
-        setStatus('FINISHED'); // Derrota total
+        setStatus('FINISHED');
       } else {
-        setStatus('WAITING_FOR_SWITCH'); // Pausa interactiva
+        setStatus('WAITING_FOR_SWITCH');
         setLogs(prev => [...prev, { id: uuidv4(), timestamp: new Date().toLocaleTimeString(), message: `¡${activePlayer.name} se debilitó! Haz clic en tu reserva para continuar.`, isCritical: false }]);
       }
       return; 
     } 
-    // Evaluación de muerte de la CPU
     else if (cpuHpRef.current <= 0) {
-      const nextIdx = cpuActiveIdx + 1;
+      const nextIdx = cIdx + 1;
       if (nextIdx >= cpuTeam.length) {
         if (intervalRef.current) clearInterval(intervalRef.current);
-        setStatus('FINISHED'); // Victoria total
+        setStatus('FINISHED');
         return;
       } else {
-        // La CPU hace el cambio automático y la batalla continúa
         setCpuActiveIdx(nextIdx);
+        cpuActiveIdxRef.current = nextIdx; // ACTUALIZAMOS EL REF DE LA CPU
         cpuHpRef.current = cpuTeam[nextIdx].stats.hp;
         setLogs(prev => [...prev, { id: uuidv4(), timestamp: new Date().toLocaleTimeString(), message: `¡${activeCpu.name} se debilitó! La CPU envía a ${cpuTeam[nextIdx].name}.`, isCritical: false }]);
       }
     }
 
-    // Alternamos el turno
     turnRef.current = isPlayerTurn ? 'CPU' : 'PLAYER';
-  }, [playerTeam, cpuTeam, playerActiveIdx, cpuActiveIdx]);
+  }, [playerTeam, cpuTeam]);
 
-  // 3. Selección manual de personaje
   const switchPlayerCharacter = useCallback((index: number) => {
-    if (playerTeam[index].stats.hp <= 0) return; // Ignora si está muerto
-    if (index === playerActiveIdx) return; // Ignora si ya está en la arena
+    if (playerTeam[index].stats.hp <= 0) return; 
+    if (index === playerActiveIdxRef.current) return; // Chequeamos contra el Ref
 
     setPlayerActiveIdx(index);
+    playerActiveIdxRef.current = index; // ACTUALIZAMOS EL REF INMEDIATAMENTE
     playerHpRef.current = playerTeam[index].stats.hp;
     
-    setLogs(prev => [...prev, { 
-      id: uuidv4(), 
-      timestamp: new Date().toLocaleTimeString(), 
-      message: `¡Has enviado a ${playerTeam[index].name}!`, 
-      isCritical: false 
-    }]);
+    setLogs(prev => [...prev, { id: uuidv4(), timestamp: new Date().toLocaleTimeString(), message: `¡Has enviado a ${playerTeam[index].name}!`, isCritical: false }]);
 
-    // Si el juego estaba pausado esperando este cambio, reanudamos el motor
     if (status === 'WAITING_FOR_SWITCH') {
       setStatus('BATTLING');
-      turnRef.current = 'CPU'; // La CPU ataca como "castigo" por hacer el cambio
+      turnRef.current = 'CPU'; 
       intervalRef.current = window.setInterval(battleTick, BATTLE_TICK_MS);
     }
-  }, [playerTeam, playerActiveIdx, status, battleTick]);
+  }, [playerTeam, status, battleTick]);
 
-  // 4. Iniciar el combate
   const startBattle = useCallback(() => {
     if (status !== 'READY') return;
     setStatus('BATTLING');
-    turnRef.current = 'PLAYER'; // El jugador siempre da el primer golpe
+    turnRef.current = 'PLAYER';
     intervalRef.current = window.setInterval(battleTick, BATTLE_TICK_MS);
   }, [status, battleTick]);
 
-  // 5. Limpieza general si el componente se desmonta
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
