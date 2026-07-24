@@ -66,27 +66,24 @@ export const AutoBattlerPage: React.FC = () => {
         </header>
 
         {/* Zona de Combate */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 place-items-center">
+{/* Zona de Combate */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 place-items-center items-stretch">
           
-          {/* Lado del Jugador */}
-          <div className="w-full flex flex-col items-center">
+          {/* Lado del Jugador (Columna 1) */}
+          <div className="w-full flex flex-col items-center order-1">
             <CharacterCard character={activePlayer} label="Equipo Jugador" />
             
-            {/* Banca de Reserva Jugador (ACTUALIZADA CON INTERACTIVIDAD) */}
+            {/* Banca de Reserva Jugador */}
             {playerTeam.length > 0 && (
               <div className="flex gap-3 mt-4 bg-gray-800 p-2 rounded-xl border border-gray-700 relative">
-                
-                {/* Cartel flotante cuando se requiere que el usuario elija */}
                 {status === 'WAITING_FOR_SWITCH' && (
-                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-bounce">
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-bounce z-10">
                     ¡Selecciona un reemplazo!
                   </div>
                 )}
-
                 {playerTeam.map((p, idx) => {
                   const isDead = p.stats.hp <= 0;
                   const isActive = idx === playerActiveIdx;
-                  // La miniatura solo es clicable si no está muerto, no está activo y el juego espera una acción
                   const isSelectable = !isDead && !isActive && (status === 'READY' || status === 'WAITING_FOR_SWITCH');
 
                   return (
@@ -106,11 +103,32 @@ export const AutoBattlerPage: React.FC = () => {
             )}
           </div>
 
-          {/* Lado de la CPU */}
-          <div className="w-full flex flex-col items-center">
+          {/* MONITOR DE ACCIÓN CENTRAL (Columna 2 - ¡NUEVO!) */}
+          <div className="w-full flex flex-col items-center justify-center order-2 my-4 lg:my-0 px-4">
+            <div className="hidden lg:block text-6xl font-black text-gray-800 italic mb-6 drop-shadow-md">
+              VS
+            </div>
+
+            {finalLog ? (
+              <div key={finalLog.id} className="bg-gray-800/80 backdrop-blur-sm border-2 border-gray-600 rounded-xl p-5 shadow-2xl w-full max-w-sm text-center animate-fade-in">
+                <p className="text-xs text-gray-400 uppercase tracking-widest mb-2 font-bold">Último Movimiento</p>
+                <p className={`font-mono text-sm md:text-base leading-relaxed ${finalLog.isCritical ? 'text-red-400 font-bold' : 'text-yellow-400'}`}>
+                  {finalLog.isCritical && "💥 "}
+                  {finalLog.message}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gray-800/50 border-2 border-gray-700 border-dashed rounded-xl p-5 w-full max-w-sm text-center">
+                <p className="text-gray-500 font-mono text-sm uppercase tracking-widest">Esperando inicio...</p>
+              </div>
+            )}
+          </div>
+
+          {/* Lado de la CPU (Columna 3) */}
+          <div className="w-full flex flex-col items-center order-3">
             <CharacterCard character={activeCpu} label="Equipo Rival" />
             
-            {/* Banca de Reserva CPU (Se mantiene automática, sin clics) */}
+            {/* Banca de Reserva CPU */}
             {cpuTeam.length > 0 && (
               <div className="flex gap-3 mt-4 bg-gray-800 p-2 rounded-xl border border-gray-700">
                 {cpuTeam.map((p, idx) => (

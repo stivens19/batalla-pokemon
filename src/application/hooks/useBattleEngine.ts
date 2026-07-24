@@ -68,18 +68,32 @@ export const useBattleEngine = () => {
     setCpuTeam(team => team.map((p, i) => i === cIdx ? { ...p, stats: { ...p.stats, hp: cpuHpRef.current } } : p));
     setLogs(prev => [...prev, result.log]);
 
-    if (playerHpRef.current <= 0) {
+if (playerHpRef.current <= 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       
-      const hasAlive = playerTeam.some(p => p.stats.hp > 0);
+      // SOLUCIÓN: Evaluamos si alguien en la banca (índices diferentes al actual) tiene más de 0 HP.
+      // Así evitamos el retraso del estado asíncrono de React.
+      const hasAlive = playerTeam.some((p, i) => i !== pIdx && p.stats.hp > 0);
+      
       if (!hasAlive) {
         setStatus('FINISHED');
+        setLogs(prev => [...prev, { 
+          id: uuidv4(), 
+          timestamp: new Date().toLocaleTimeString(), 
+          message: `¡${activePlayer.name} cayó! No te quedan más Pokémon.`, 
+          isCritical: false 
+        }]);
       } else {
         setStatus('WAITING_FOR_SWITCH');
-        setLogs(prev => [...prev, { id: uuidv4(), timestamp: new Date().toLocaleTimeString(), message: `¡${activePlayer.name} se debilitó! Haz clic en tu reserva para continuar.`, isCritical: false }]);
+        setLogs(prev => [...prev, { 
+          id: uuidv4(), 
+          timestamp: new Date().toLocaleTimeString(), 
+          message: `¡${activePlayer.name} se debilitó! Haz clic en tu reserva para continuar.`, 
+          isCritical: false 
+        }]);
       }
       return; 
-    } 
+    }
     else if (cpuHpRef.current <= 0) {
       const nextIdx = cIdx + 1;
       if (nextIdx >= cpuTeam.length) {
