@@ -10,7 +10,7 @@ export const AutoBattlerPage: React.FC = () => {
     status, logs, 
     playerTeam, cpuTeam, 
     playerActiveIdx, cpuActiveIdx, 
-    initBattle, startBattle 
+    initBattle, startBattle, switchPlayerCharacter // <-- Añadido aquí
   } = useBattleEngine();
   
   const [isFetching, setIsFetching] = useState(false);
@@ -18,7 +18,6 @@ export const AutoBattlerPage: React.FC = () => {
   const handleFetchDraft = async () => {
     setIsFetching(true);
     try {
-      // Lanzamos 6 peticiones en paralelo para armar los equipos rápidamente
       const [p1, p2, p3, c1, c2, c3] = await Promise.all([
         fetchRandomCharacter(), fetchRandomCharacter(), fetchRandomCharacter(),
         fetchRandomCharacter(), fetchRandomCharacter(), fetchRandomCharacter()
@@ -26,7 +25,7 @@ export const AutoBattlerPage: React.FC = () => {
       
       initBattle([p1, p2, p3], [c1, c2, c3]);
     } catch (error) {
-      alert("Error en la API. Revisa la conexión.");
+      alert("Error en la API. Revisa la conexión." + error);
     } finally {
       setIsFetching(false);
     }
@@ -34,7 +33,6 @@ export const AutoBattlerPage: React.FC = () => {
 
   const finalLog = logs.length > 0 ? logs[logs.length - 1] : null;
 
-  // Personajes activos en la arena
   const activePlayer = playerTeam[playerActiveIdx] || null;
   const activeCpu = cpuTeam[cpuActiveIdx] || null;
 
@@ -74,18 +72,36 @@ export const AutoBattlerPage: React.FC = () => {
           <div className="w-full flex flex-col items-center">
             <CharacterCard character={activePlayer} label="Equipo Jugador" />
             
-            {/* Banca de Reserva Jugador */}
+            {/* Banca de Reserva Jugador (ACTUALIZADA CON INTERACTIVIDAD) */}
             {playerTeam.length > 0 && (
-              <div className="flex gap-3 mt-4 bg-gray-800 p-2 rounded-xl border border-gray-700">
-                {playerTeam.map((p, idx) => (
-                  <div key={`${p.id}-${idx}`} 
-                    className={`w-14 h-14 rounded-full border-2 overflow-hidden bg-gray-900 transition-all duration-300
-                    ${p.stats.hp <= 0 ? 'border-red-900 grayscale opacity-40' : 
-                      idx === playerActiveIdx ? 'border-green-400 scale-110 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'border-gray-600 opacity-80'}`}
-                  >
-                    <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-1" />
+              <div className="flex gap-3 mt-4 bg-gray-800 p-2 rounded-xl border border-gray-700 relative">
+                
+                {/* Cartel flotante cuando se requiere que el usuario elija */}
+                {status === 'WAITING_FOR_SWITCH' && (
+                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full animate-bounce">
+                    ¡Selecciona un reemplazo!
                   </div>
-                ))}
+                )}
+
+                {playerTeam.map((p, idx) => {
+                  const isDead = p.stats.hp <= 0;
+                  const isActive = idx === playerActiveIdx;
+                  // La miniatura solo es clicable si no está muerto, no está activo y el juego espera una acción
+                  const isSelectable = !isDead && !isActive && (status === 'READY' || status === 'WAITING_FOR_SWITCH');
+
+                  return (
+                    <div key={`${p.id}-${idx}`} 
+                      onClick={() => isSelectable ? switchPlayerCharacter(idx) : null}
+                      className={`w-14 h-14 rounded-full border-2 overflow-hidden bg-gray-900 transition-all duration-300
+                      ${isDead ? 'border-red-900 grayscale opacity-40 cursor-not-allowed' : 
+                        isActive ? 'border-green-400 scale-110 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 
+                        isSelectable ? 'border-indigo-400 cursor-pointer hover:scale-110 shadow-[0_0_15px_rgba(79,70,229,0.5)] animate-pulse' : 
+                        'border-gray-600 opacity-80 cursor-default'}`}
+                    >
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-1" />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -94,7 +110,7 @@ export const AutoBattlerPage: React.FC = () => {
           <div className="w-full flex flex-col items-center">
             <CharacterCard character={activeCpu} label="Equipo Rival" />
             
-            {/* Banca de Reserva CPU */}
+            {/* Banca de Reserva CPU (Se mantiene automática, sin clics) */}
             {cpuTeam.length > 0 && (
               <div className="flex gap-3 mt-4 bg-gray-800 p-2 rounded-xl border border-gray-700">
                 {cpuTeam.map((p, idx) => (
@@ -121,7 +137,6 @@ export const AutoBattlerPage: React.FC = () => {
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
             <div className="bg-gray-800 p-8 rounded-2xl text-center border-2 border-indigo-500 shadow-[0_0_50px_rgba(79,70,229,0.3)] max-w-lg w-full">
               <h2 className="text-4xl font-bold text-white mb-6">
-                {/* Evaluamos quién tiene vida en su equipo para declarar al ganador */}
                 {playerTeam.some(p => p.stats.hp > 0) ? '¡Has Ganado el Torneo!' : '¡Has sido Derrotado!'}
               </h2>
               

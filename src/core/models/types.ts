@@ -1,4 +1,5 @@
-export type BattleStatus = 'IDLE' | 'FETCHING' | 'READY' | 'BATTLING' | 'FINISHED';
+
+export type BattleStatus = 'IDLE' | 'FETCHING' | 'READY' | 'BATTLING' | 'WAITING_FOR_SWITCH' | 'FINISHED';
 
 export interface Character {
   id: string | number;
