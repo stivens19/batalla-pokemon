@@ -1,77 +1,82 @@
-# React + TypeScript + Vite
+# Batalla Pokémon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web desarrollada en React + TypeScript + Vite para simular un torneo automático de Pokémon en modo 3v3. El proyecto consume la PokeAPI para generar equipos aleatorios y muestra una experiencia visual tipo auto battler con logs de combate, golpes críticos y selección de personajes.
 
-Currently, two official plugins are available:
+## Características
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Generación aleatoria de equipos de 3 Pokémon por lado.
+- Simulación de combate automático entre dos equipos.
+- Sistema de daño con golpes críticos y mensajes de batalla en tiempo real.
+- Cambio de personajes durante la batalla para estrategias de reemplazo.
+- Interfaz visual con Tailwind CSS y componentes organizados por Atomic Design.
+- Consumo de datos desde la PokeAPI.
 
-## React Compiler
+## Tecnologías utilizadas
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- PokeAPI
+- UUID
+- ESLint
 
-Note: This will impact Vite dev & build performances.
+## Requisitos previos
 
-## Expanding the ESLint configuration
+- Node.js 18 o superior
+- npm o pnpm
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Instalación
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+1. Clona este repositorio:
+   ```bash
+   git clone <url-del-repositorio>
+   cd batalla-pokemon
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+3. Crea un archivo .env en la raíz del proyecto con la URL base de la API:
+   ```env
+   VITE_API_URL=https://pokeapi.co/api/v2
+   ```
 
+## Ejecución
+
+Inicia el servidor de desarrollo:
+
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+La aplicación quedará disponible en la URL que indique Vite, normalmente en http://localhost:5173.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Construcción para producción
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+npm run build
 ```
+
+## Estructura del proyecto
+
+```text
+src/
+  application/     Hooks y lógica de aplicación
+  core/            Modelos, constantes y motor de batalla
+  infrastructure/   Consumo de API y adaptadores
+  ui/              Componentes de interfaz (atoms, molecules, organisms, pages)
+```
+
+## Scripts disponibles
+
+- npm run dev: inicia el entorno de desarrollo
+- npm run build: compila la aplicación para producción
+- npm run lint: ejecuta ESLint sobre el proyecto
+- npm run preview: previsualiza la build generada
+
+## Nota
+
+Este proyecto está pensado como una demo interactiva de lógica de combate y arquitectura frontend en React, con enfoque en componentes reutilizables y separación de responsabilidades.
